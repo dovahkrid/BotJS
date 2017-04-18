@@ -35,6 +35,32 @@ const sendTextMessage = (senderID, text) => {
   });
 };
 
+const sendImageMessage = (senderID, imageUri) => {
+  request({
+    url: 'https://graph.facebook.com/v2.6/me/messages',
+    qs: {access_token: FACEBOOK_ACCESS_TOKEN},
+    method: 'POST',
+    json: {
+      recipient: {id: senderID},
+      message: {
+        attachment: {
+          type: 'image',
+          payload: {url: imageUri}
+        }
+      }
+    }
+  }, function(err, res, body){
+    if(!err && res.statusCode == 200){
+      console.log("Sent !");
+    }
+    else {
+      console.error("Error !");
+      console.error(res);
+      console.error(err)
+    }
+  });
+};
+
 module.exports = (event) => {
   const senderID = event.sender.id;
   const message = event.message.text;
@@ -45,7 +71,14 @@ module.exports = (event) => {
   apiaiSession.on('response', (response) => {
     const result = response.result.fulfillment.speech;
     console.log(result);
-    sendTextMessage(senderID, result);
+    if (response.result.metadata.intentName === 'images.search') {
+      if (result === 'error') {
+        sendTextMessage(senderID, 'Sorry, can you say that again?');
+      }
+      sendImageMessage(senderID, result);
+    } else {
+      sendTextMessage(senderID, result);
+    }
   });
 
   apiaiSession.on('error', error => console.log(error));
